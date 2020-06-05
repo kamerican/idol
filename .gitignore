@@ -5,7 +5,7 @@
 *.pyc
 
 # Jupyter notebooks
-*.ipynb
+# *.ipynb
 
 # Images
 *.jpg

@@ -1,3 +1,92 @@
+# face_detector_model = 'RFB-320'
+# face_detector_model = 'res10_300x300_ssd_iter_140000'
+# face_detector_prototxt_path = MODEL_DIR.joinpath(face_detector_model + '.prototxt.txt')
+# face_detector_caffemodel_path = MODEL_DIR.joinpath(face_detector_model + '.caffemodel')
+# face_detector = cv2.dnn.readNetFromCaffe(str(face_detector_prototxt_path), str(face_detector_caffemodel_path))
+
+
+from pathlib import Path
+
+# Note: stem + suffix = name
+BASE_DIR = Path(__file__).parent.parent
+DRIVE_NAME = "F:\\"
+DATA_DIR = Path(DRIVE_NAME).joinpath('data')
+IMAGE_DIR = DATA_DIR.joinpath('images')
+DUMP_DIR = DATA_DIR.joinpath('dump')
+MODEL_DIR = DATA_DIR.joinpath('models')
+# for c in DATA_DIR.iterdir(): print(c)
+
+IMAGE_FILE_SUFFIX_LIST = [
+    '.jpg',
+    '.jpeg',
+    '.jfif',
+    '.png',
+]
+IMAGE_FILE_SUFFIX_WHITELIST_LIST = [
+    '.pkl',
+]
+
+
+# Functions
+def sort_function(picture):
+    return picture.stat().st_ctime
+def rename_images():
+    # not sure if working
+    picture_number = 0
+    count = 0
+    previous_datetime_string = ""
+    picture_dir = BASE_DIR / 'database' / 'rename'
+    picture_list = list(picture_dir.glob('*'))
+    sorted_list = sorted(picture_list, key=sort_function)
+    for picture_path in sorted_list:
+        created_datetime = datetime.fromtimestamp(picture_path.stat().st_ctime)
+        created_datetime_string = created_datetime.strftime("%y%m%d_%H%M%S")
+
+        if created_datetime_string == previous_datetime_string:
+            count += 1
+            if count > 999:
+                previous_datetime_string = created_datetime_string
+                raise Exception("Error: count exceeded 999 for {}".format(picture_path))
+        else:
+            # if count != 0:
+            #     print(count)
+            count = 0
+        rename_string = "{0}_{1}{2}".format(
+            created_datetime_string,
+            str(count).zfill(3),
+            picture_path.suffix,
+        )
+        previous_datetime_string = created_datetime_string
+        rename_path = picture_dir / rename_string
+        picture_number += 1
+        # if picture_number % 500 == 0:
+        #     print(picture_number)
+        #     print(rename_path)
+        if not rename_path.is_file():
+            print("{0} -> {1}".format(
+                picture_path.name,
+                rename_path.name,
+            ))
+            picture_path.rename(rename_path)
+def move_json():
+    time_start = time()
+    number_of_json = 0
+    image_directory = IMAGE_DIR
+    for folder in image_directory.iterdir():
+        # print(folder)
+        for image in folder.glob('*.json'):
+            target = DUMP_DIR.joinpath(image.name)
+            # print(image.name)
+            # print(target)
+            image.replace(target)
+            number_of_json += 1
+            # break
+        # break
+    print("Moved {0} json files in {1} seconds.".format(
+        number_of_json,
+        round(time() - time_start),
+    ))
+
 import pickle
 # from datetime import datetime
 # from time import time
