@@ -1,290 +1,85 @@
-# face_detector_model = 'RFB-320'
-# face_detector_model = 'res10_300x300_ssd_iter_140000'
-# face_detector_prototxt_path = MODEL_DIR.joinpath(face_detector_model + '.prototxt.txt')
-# face_detector_caffemodel_path = MODEL_DIR.joinpath(face_detector_model + '.caffemodel')
-# face_detector = cv2.dnn.readNetFromCaffe(str(face_detector_prototxt_path), str(face_detector_caffemodel_path))
+
+"""
+UPDATE SOURCE IF FACE ALIGNMENT IS UPDATED
+api.py, return statements for get_landmarks_from_image():
+
+Line 128: return None, None
+Line 144: return None, None
+Line 186: return landmarks, detected_faces
+
+"""
 
 
-from pathlib import Path
 
-# Note: stem + suffix = name
-BASE_DIR = Path(__file__).parent.parent
-DRIVE_NAME = "F:\\"
-DATA_DIR = Path(DRIVE_NAME).joinpath('data')
-IMAGE_DIR = DATA_DIR.joinpath('images')
-DUMP_DIR = DATA_DIR.joinpath('dump')
-MODEL_DIR = DATA_DIR.joinpath('models')
-# for c in DATA_DIR.iterdir(): print(c)
+# img_preds, face_detections = fa.get_landmarks_from_directory(
+#     path=str(image_dir),
+#     extensions=['.jpg', '.png', '.jfif'],
+# )
+#    
 
-IMAGE_FILE_SUFFIX_LIST = [
-    '.jpg',
-    '.jpeg',
-    '.jfif',
-    '.png',
-]
-IMAGE_FILE_SUFFIX_WHITELIST_LIST = [
-    '.pkl',
-]
+# 3D-Plot
+# for img_path, faces in img_preds.items():
+#     # print(img_path)
+#     # print(len(value))
+#     # print("\n")
+
+#     fig = plt.figure()
+#     ax = fig.add_axes([0, 0, 1, 1], projection='3d')
+#     # ax.imshow(io.imread(img_path))
+#     # ax.axis('off')
+#     for index, face in enumerate(faces):
+#         # ax = fig.add_subplot(1, len(faces), index + 1)
+#         surf = ax.scatter(
+#             face[:, 0] * 1.2,
+#             face[:, 1],
+#             face[:, 2],
+#             c='cyan',
+#             alpha=1.0,
+#             edgecolor='b',
+#         )
+#         for pred_type in pred_types.values():
+#             # print(pred)
+#             # print(type(pred))
+#             ax.plot3D(
+#                 face[pred_type.list_slice, 0] * 1.2,
+#                 face[pred_type.list_slice, 1],
+#                 face[pred_type.list_slice, 2],
+#                 color='blue',
+#             )
+#         ax.view_init(elev=160., azim=90.)
+#         ax.set_xlim(ax.get_xlim()[::-1])
+#         plt.show()
 
 
-# Functions
-def sort_function(picture):
-    return picture.stat().st_ctime
-def rename_images():
-    # not sure if working
-    picture_number = 0
-    count = 0
-    previous_datetime_string = ""
-    picture_dir = BASE_DIR / 'database' / 'rename'
-    picture_list = list(picture_dir.glob('*'))
-    sorted_list = sorted(picture_list, key=sort_function)
-    for picture_path in sorted_list:
-        created_datetime = datetime.fromtimestamp(picture_path.stat().st_ctime)
-        created_datetime_string = created_datetime.strftime("%y%m%d_%H%M%S")
 
-        if created_datetime_string == previous_datetime_string:
-            count += 1
-            if count > 999:
-                previous_datetime_string = created_datetime_string
-                raise Exception("Error: count exceeded 999 for {}".format(picture_path))
-        else:
-            # if count != 0:
-            #     print(count)
-            count = 0
-        rename_string = "{0}_{1}{2}".format(
-            created_datetime_string,
-            str(count).zfill(3),
-            picture_path.suffix,
-        )
-        previous_datetime_string = created_datetime_string
-        rename_path = picture_dir / rename_string
-        picture_number += 1
-        # if picture_number % 500 == 0:
-        #     print(picture_number)
-        #     print(rename_path)
-        if not rename_path.is_file():
-            print("{0} -> {1}".format(
-                picture_path.name,
-                rename_path.name,
-            ))
-            picture_path.rename(rename_path)
-def move_json():
-    time_start = time()
-    number_of_json = 0
-    image_directory = IMAGE_DIR
-    for folder in image_directory.iterdir():
-        # print(folder)
-        for image in folder.glob('*.json'):
-            target = DUMP_DIR.joinpath(image.name)
-            # print(image.name)
-            # print(target)
-            image.replace(target)
-            number_of_json += 1
-            # break
-        # break
-    print("Moved {0} json files in {1} seconds.".format(
-        number_of_json,
-        round(time() - time_start),
-    ))
+# def evaluate(self):
+#     """
+#     Return ?
+#     """
+#     # cosine(a, b)
 
-import pickle
-# from datetime import datetime
-# from time import time
+#     # if mtcnn_dict['confidence'] < 0.8:
+#     #     print("Confidence: {0} -> skipping a face in {1}".format(
+#     #         mtcnn_dict['confidence'],
+#     #         image_path,
+#     #     ))
+#     #     continue
+#     return
 
-import cv2
-# import torch
-import numpy as np
-# from scipy.spatial.distance import cosine
-from mtcnn import MTCNN
-from keras_vggface.vggface import VGGFace
-from keras_vggface.utils import preprocess_input
-
-import const
-
-### Class
-class Extractor(object):
-    """
-    Returns class extractor object used to extract face data.
-    """
-    def __init__(self):
-        self.mtcnn_face_detector = MTCNN()
-        self.vgg_embedding_extractor = VGGFace(
-            # model='resnet50',
-            model='senet50',
-            include_top=False,
-            input_shape=(224, 224, 3),
-            pooling='avg'
-        )
-        # print('Inputs: %s' % self.vgg_embedding_extractor.inputs)
-        # print('Outputs: %s' % self.vgg_embedding_extractor.outputs)
-    def extract(self, image_directory_path):
-        """
-        Saves face data from images in a directory into a pickle file inside the directory.
-        """
-        ### Get list of face data
-        images_list = self._extract_from_directory(image_directory_path)
-
-        ### Save list of face data as pickle
-        self.save(image_directory_path, images_list)
-
-        ### Display extraction process
-        self.display_image(images_list)
-    def save(self, image_directory_path, images_list):
-        """
-        Saves face data into a pickle file inside the directory
-        """
-        pkl_path = self._get_pkl_path(image_directory_path)
-        with open(pkl_path, 'wb') as pkl_file:
-            pickle.dump(images_list, pkl_file)
-    def load(self, image_directory_path):
-        """
-        Loads face data from a pickle file inside the directory
-        """
-        pkl_path = self._get_pkl_path(image_directory_path)
-        with open(pkl_path, 'rb') as pkl_file:
-            return pickle.load(pkl_file)
-    def evaluate(self):
-        """
-        Return ?
-        """
-        # cosine(a, b)
-
-        # if mtcnn_dict['confidence'] < 0.8:
-        #     print("Confidence: {0} -> skipping a face in {1}".format(
-        #         mtcnn_dict['confidence'],
-        #         image_path,
-        #     ))
-        #     continue
-        return
-    def display_image(self, images_list, speed=2):
-        """
-        Displays base images and face images using opencv.
-        Speed is in seconds.
-        """
-        # print(images_list)
-        for image_dict in images_list:
-            # print(image_dict)
-            base_image = cv2.imread(str(image_dict['path']))
-            base_image_for_view = base_image.copy()
-            for face_index, face_dict in enumerate(image_dict['face_list']):
-                face_image, x_1, x_2, y_1, y_2 = \
-                    self._crop_and_resize(base_image, face_dict['mtcnn_extraction']['box'])
-                ### Show resized face images along top row of screen
-                face_image_window = '{}'.format(face_index)
-                cv2.imshow(face_image_window, face_image)
-                cv2.moveWindow(face_image_window, 224*face_index, 0)
-                ### Draw bounding box on original image
-                base_image_for_view = cv2.rectangle(
-                    base_image_for_view,
-                    (x_1, y_1),
-                    (x_2, y_2),
-                    (0, 255, 0), # line color
-                    2, # line pixel thickness
-                )
-            ### Show base image underneath the extracted faces
-            cv2.imshow('Base image', base_image_for_view)
-            cv2.moveWindow('Base image', 0, 224)
-            cv2.waitKey(speed*1000)
-            cv2.destroyAllWindows()
-    def _check_if_image(self, file_path):
-        is_image = file_path.suffix in const.IMAGE_FILE_SUFFIX_LIST
-        is_white_list = file_path.suffix in const.IMAGE_FILE_SUFFIX_WHITELIST_LIST
-        if not is_image and not is_white_list:
-            raise TypeError("Unknown file type found: {}".format(
-                file_path.suffix,
-            ))
-        return is_image
-    def _get_pkl_path(self, directory_path):
-        """
-        Returns path of the pickle file containing face data.
-        Assumes that the pickle file has the same file name as the directory it resides in.
-        """
-        return directory_path.joinpath(directory_path.name + '.pkl')
-    def _extract_from_directory(self, image_directory_path):
-        """
-        Returns a list of dicts that contains face data extracted from images in a directory.
-        """
-        images_list = []
-        file_list = list(image_directory_path.iterdir())
-        n_file = len(file_list)
-        print("Processing images from:\n{}".format(image_directory_path))
-        for file_index, file_path in enumerate(file_list):
-            print("Processing file {0}/{1}".format(
-                file_index,
-                n_file,
-            ))
-            if not self._check_if_image(file_path):
-                continue
-            face_list = self._extract_from_image(file_path)
-            images_list.append({
-                'path': file_path,
-                'face_list': face_list,
-            })
-        return images_list
-    def _extract_from_image(self, image_path):
-        """
-        Returns a list of face data extracted from an image (path).
-        """
-        face_list = []
-        ### Load image and use MTCNN to get face bounding box
-        base_image = cv2.imread(str(image_path))
-        for mtcnn_dict in self.mtcnn_face_detector.detect_faces(base_image):
-            ### Get face image from bounding box, preprocess, and extract VGG embeddings
-            face_image, _, _, _, _ = self._crop_and_resize(base_image, mtcnn_dict['box'])
-            samples = preprocess_input(
-                np.expand_dims(
-                    face_image.astype('float32'), axis=0
-                ),
-                version=2,
-            )
-            embedding = self.vgg_embedding_extractor.predict(samples)
-            ### Save data in a dict
-            face_list.append({
-                'source_image_path': image_path,
-                'mtcnn_extraction': mtcnn_dict,
-                'vgg_extraction': embedding,
-            })
-        return face_list
-    def _crop_and_resize(self, base_image, bounding_box):
-        """
-        Returns the face image and the (x, y, w, h) bounding box used.
-        """
-        (x_coord, y_coord, x_width, y_height) = bounding_box
-        x_1 = max(x_coord, 0)
-        x_2 = min(x_coord + x_width, base_image.shape[1])
-        y_1 = max(y_coord, 0)
-        y_2 = min(y_coord + y_height, base_image.shape[0])
-        face_image = base_image[y_1:y_2, x_1:x_2]
-        return (
-            cv2.resize(face_image, (224, 224)),
-            x_1,
-            x_2,
-            y_1,
-            y_2,
-        )
-
-### Script
-if __name__ == "__main__":
-    # temp_dir = const.IMAGE_DIR.joinpath('2010-09-27')
-    temp_dir = const.IMAGE_DIR.joinpath('2013-12-23')
-    extractor = Extractor()
-
-    # extractor.extract(temp_dir)
-
-    image_list = extractor.load(temp_dir)
-    extractor.display_image(image_list, speed=1)
-
-    # image_list = extractor.load(temp_dir)
-    # a = cv2.imread(str(image_list[0]['path']))
-    # b = a
-    # a = cv2.rectangle(
-    #     a,
-    #     (0, 0),
-    #     (200, 200),
-    #     (0, 255, 0), # line color
-    #     2, # line pixel thickness
-    # )
-    # cv2.imshow('a', a)
-    # cv2.imshow('b', b)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+# def _crop_and_resize(self, base_image, bounding_box):
+#     """
+#     Returns the face image and the (x, y, w, h) bounding box used.
+#     """
+#     (x_coord, y_coord, x_width, y_height) = bounding_box
+#     x_1 = max(x_coord, 0)
+#     x_2 = min(x_coord + x_width, base_image.shape[1])
+#     y_1 = max(y_coord, 0)
+#     y_2 = min(y_coord + y_height, base_image.shape[0])
+#     face_image = base_image[y_1:y_2, x_1:x_2]
+#     return (
+#         cv2.resize(face_image, (224, 224)),
+#         x_1,
+#         x_2,
+#         y_1,
+#         y_2,
+#     )
