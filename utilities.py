@@ -1,3 +1,7 @@
+"""
+This contains utility functions for the project.
+"""
+
 from pathlib import Path
 from datetime import datetime
 
@@ -89,10 +93,10 @@ if __name__ == "__main__":
     #         target = image.parent.joinpath(image.stem + '.png')
     #     elif image.suffix == '.jpeg':
     #         target = image.parent.joinpath(image.stem + '.jpg')
-        
+
     #     if image.suffix in ['.gif', '.mp4', '.MOV']:
     #         target = DUMP_DIR.joinpath(image.name)
-        
+
     #     if target is not None:
     #         image.rename(target)
 
@@ -119,10 +123,10 @@ if __name__ == "__main__":
     #             target = image.parent.joinpath(image.stem + '.png')
     #         elif image.suffix == '.jpeg':
     #             target = image.parent.joinpath(image.stem + '.jpg')
-            
+
     #         if image.suffix in ['.gif', '.mp4', '.MOV']:
     #             target = DUMP_DIR.joinpath(image.name)
-            
+
     #         if target is not None:
     #             print("{} -> {}".format(image, target))
     #             image.rename(target)

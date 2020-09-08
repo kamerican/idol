@@ -1,0 +1,6 @@
+UPDATE SOURCE IF FACE ALIGNMENT IS UPDATED
+api.py, return statements for get_landmarks_from_image():
+
+Line 128: return None, None
+Line 144: return None, None
+Line 186: return landmarks, detected_faces

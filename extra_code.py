@@ -1,21 +1,25 @@
-
-"""
-UPDATE SOURCE IF FACE ALIGNMENT IS UPDATED
-api.py, return statements for get_landmarks_from_image():
-
-Line 128: return None, None
-Line 144: return None, None
-Line 186: return landmarks, detected_faces
-
-"""
-
-
-
 # img_preds, face_detections = fa.get_landmarks_from_directory(
 #     path=str(image_dir),
 #     extensions=['.jpg', '.png', '.jfif'],
 # )
-#    
+#
+
+
+
+
+# df_as_list_of_dicts.append({
+#     'img_path': f,
+#     'fd_y1': detection[0],
+#     'fd_x1': detection[1],
+#     'fd_y2': detection[2],
+#     'fd_x2': detection[3],
+#     'confidence': detection[4],
+#     'landmarks': landmarks[index],
+# })
+
+
+
+
 
 # 3D-Plot
 # for img_path, faces in img_preds.items():
